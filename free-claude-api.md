@@ -115,3 +115,4 @@ Stack in this order:
 - Free providers go down on weekends and evenings (high traffic). Do critical work on weekday mornings.
 - If a provider gives 503, wait 30 minutes and try again before switching. Often temporary.
 - The model quality gap between Sonnet 4.6 and GLM 5.2 is real but GLM is surprisingly capable for codebase analysis tasks.
+- ⚠️ These methods are all working as of Jul 23 2026. We never promise that these are permanent. Just stuff that are working as of now.
