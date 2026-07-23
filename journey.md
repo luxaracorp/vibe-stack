@@ -44,7 +44,7 @@ I started coding with Claude after failing with ChatGPT. That decision shaped ev
 
 **Stack:** Python FastAPI + FFmpeg backend, Next.js frontend on Cloudflare Pages, Groq Whisper for transcription, Gemini 2.5 Flash for Director AI, Tigris execution engine
 
-**Site:** [maxum.pages.dev](https://maxum.pages.dev)
+**Site:** [maxum.pages.dev](https://maxum.pages.dev) (Currently in maintenance) 
 
 **GitHub:** github.com/luxaracorp/Maxum (private)
 
@@ -93,3 +93,7 @@ Every project taught me something that fed the next one. StudiqAI taught me the 
 Nothing was wasted. Even the wrapper.
 
 That's the real lesson.
+
+# Interesting Past
+
+My past is very interesting. not related to code or AI at all. I was just a kid playing Roblox games. I wanted to build Roblox games. Slowly, I started watching Discord content. which can connect with Roblox content. Discord slowly connected me with Discord bots and a bit of coding. mainly Roblox studio connected me with coding. Roblox studio is an game engine for Roblox which uses *lua* Since then I was obsessed with entrepreneurship. This is not the full story. there is a lot to cover. I'm making this repo as an ultimate guide for new vibe coders.
