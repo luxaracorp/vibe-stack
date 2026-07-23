@@ -57,7 +57,7 @@ You don't need funding to ship. You need information.
 Built something with this? Hit a wall? Want to talk?
 
 - 🌐 [luxara.pages.dev](https://luxara.pages.dev)
-- 📸 Instagram: coming soon
+- 📸 Instagram: scythe.ftw_
 - 💬 Discord: scythe.ftw
 
 ---
