@@ -65,5 +65,7 @@ Built something with this? Hit a wall? Want to talk?
 > *"If you want something so bad, the future version of you will have it."*
 > 
 > This repo is what I needed a few months ago. Now it's yours.
+> ⚠️ This repo is mainly for beginner vibe coders. I personally tried all of these in the past. and regularly use some of these methods.
+> ⚠️ This Repo is not fully white. This repo contains some gray-line experiences and knowledge. Nothing illegal. But you have to be careful at violating the provider's terms and service.
 
 **— Andrew, Luxara**
