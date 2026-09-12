@@ -19,13 +19,13 @@ This repo is everything I wish I had when I started. Real methods. Honest takes.
 | Section | What you'll find |
 |---|---|
 | [Free Claude API Methods](./free-claude-api.md) | Every working method to get real Claude models for free |
-| [Free Server Stack](./free-servers.md) | How to run a production backend on How to run a production backend on How to run a production backend on $0 using Oracle + Google Cloud using USS (Deepnote) + Google Cloud using USS (Deepnote) + Google Cloud |
-| [Free Deployment](./free-deployment.md) | Cloudflare Pages, free subdomains, zero-cost frontend hosting |
+| [Free Server Stack](./free-servers.md) | How to run a production backend on How to run a production backend on How to run a production backend on How to run a production backend on $0 using Oracle + Google Cloud using USS (Deepnote) + Google Cloud using USS (Deepnote) + Google Cloud using USS (Deepnote) + Google Cloud |
+| [Free Deployment](./free-deployment.md) ⚠️ coming soon | Cloudflare Pages, free subdomains, zero-cost frontend hosting |
 | [Vibe Coding Philosophy](./vibe-coding.md) | How to think architecturally and use AI as execution, not thinking |
 | [AI Agent Tips](./ai-agents.md) | What works, what doesn't, and the Enoch experiment |
 | [Freelancing: Honest Take](./freelancing.md) | Should new vibe coders freelance? My real answer |
 | [Andrew's Journey](./journey.md) | StudiqAI â†’ Maxum, what each project taught me |
-| [Tools Ranked](./tools.md) | Every tool in my stack ranked by usefulness and cost |
+| [Tools Ranked](./tools.md) ⚠️ coming soon | Every tool in my stack ranked by usefulness and cost |
 
 ---
 
