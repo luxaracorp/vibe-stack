@@ -1,15 +1,15 @@
 # USS — Unified Server Stack
 ## The real machine first
 
-> **This is the hardware USS actually runs on:** an **AWS EC2 Xeon Platinum 8259CL** machine with **30.9 GB RAM**, **100 GB disk**, in **`us-east-1`**.
+> **This is the hardware USS actually runs on:** an **Amazon EC2 m7i.4xlarge** running **Debian GNU/Linux 12 (bookworm)** with **Intel Xeon Platinum 8488C (16 cores)**, **61.77 GB RAM total**, and **199.90 GB disk** in **`us-east-1`**.
 >
-> The often-repeated “2 vCPU, 5 GB RAM” figure is **Deepnote’s advertised Basic-machine limit**, not the underlying machine USS gets. USS gives your backend substantially more room than that label suggests.
+> The instance type is not guaranteed and may vary by Deepnote Team trial allocation, but the observed runtime has consistently been in the **AWS m7i family**. The “2 vCPU, 5 GB RAM” figure is **Deepnote’s advertised Basic-machine limit**, not the underlying machine USS gets. USS gives your backend substantially more room than that.
 
 ## What USS actually gives you
 
 USS turns that machine into a **persistent, publicly accessible, production-grade backend** at zero infrastructure cost. You get:
 
-- Real AWS compute: Xeon Platinum 8259CL, 30.9 GB RAM, 100 GB disk
+- Real AWS compute: Amazon EC2 m7i.4xlarge, Intel Xeon Platinum 8488C (16 cores), 61.77 GB RAM total, 199.90 GB disk
 - Root terminal access and a Python 3.13 environment with `venv`
 - A public HTTPS endpoint through Deepnote’s native port 8080 exposure
 - External persistence through Upstash Redis, Cloudflare R2, and Supabase
@@ -17,7 +17,7 @@ USS turns that machine into a **persistent, publicly accessible, production-grad
 - Automated health checks, handoffs, state transfer, and node rotation
 - Continuous operation with only about three minutes of human work per week
 
-**Bottom line:** USS is not “a 2-vCPU, 5-GB server.” That is the plan description. The running USS node is an AWS EC2-backed machine with the hardware above. The node is disposable; the service and its data are not.
+**Bottom line:** USS is not “a 2-vCPU, 5-GB server.” That is the plan description. The running USS node is an AWS EC2-backed machine with the hardware above. The node is disposable; the service remains persistent through external stores and a rotating worker URL. The exact instance type may vary per node, but it is consistently in the AWS m7i family on Team trial.
 
 > Built and tested by Luxara Corporation. Documented for AI agents and zero-budget developers.
 > This is a living architecture. Every detail here has been validated in production.
@@ -43,7 +43,7 @@ The result is a backend that never goes down, never costs money, and self-manage
 
 **USS nodes are disposable. Data is not.**
 
-A USS node is pure compute. It processes jobs, serves API requests, and runs your backend. It never holds state permanently. All state — job queues, session data, processed files, database snapshots — lives in external stores.
+A USS node is pure compute. It processes jobs, serves API requests, and runs your backend. It never holds state permanently. All state — job queues, session data, processed files, database snapshots — lives in external stores, not on the node disk.
 
 When a node dies, nothing is lost. A new node boots, connects to the same external stores, and picks up exactly where the old one left off.
 
@@ -57,10 +57,17 @@ When a node dies, nothing is lost. A new node boots, connects to the same extern
 
 **Actual observed hardware per node:**
 
-- AWS EC2 Xeon Platinum 8259CL
-- 30.9 GB RAM
-- 100 GB disk
+- AWS EC2 m7i.4xlarge
+- Debian GNU/Linux 12 (bookworm)
+- CPU: Intel Xeon Platinum 8488C, 16 cores
+- RAM: 61.77 GB total
+- Disk: 199.90 GB
 - Region: `us-east-1`
+
+**Important note:**
+
+- The exact instance type is not guaranteed and may vary across Deepnote Team trial nodes.
+- The runtime has consistently been in the **AWS m7i family** on Team trial, but do not assume one exact node spec is fixed forever.
 
 **Do not confuse this with Deepnote’s advertised plan limit:**
 
@@ -72,7 +79,7 @@ When a node dies, nothing is lost. A new node boots, connects to the same extern
 - Root terminal access
 - Python 3.13 environment with `venv`
 - Public HTTPS URL via native port 8080 exposure
-- 100 GB local storage (ephemeral — do not rely on it for persistence)
+- 199.90 GB local storage (ephemeral — do not rely on it for persistence)
 
 **Trial details:**
 
@@ -85,7 +92,7 @@ When a node dies, nothing is lost. A new node boots, connects to the same extern
 
 **How nodes stay alive:**
 
-A notebook cell runs an infinite loop that pings the backend every 30 minutes. This keeps the kernel in active execution state, preventing idle shutdown. Closing the browser tab does not stop execution.
+A notebook cell runs an infinite loop that pings the backend every 30 minutes. This keeps the kernel in active execution state, preventing idle shutdown. Closing the browser tab does not stop execution when the cell remains active.
 
 **What triggers suspension (avoid these):**
 
@@ -124,7 +131,7 @@ A notebook cell runs an infinite loop that pings the backend every 30 minutes. T
 
 **The problem:** Deepnote node URLs change on every rotation. A new node gets a new UUID subdomain. Anything hardcoded to a node URL breaks.
 
-**The solution:** A Cloudflare Worker sits between your frontend and USS nodes. It reads a single environment variable (`USS_NODE_URL`) and proxies all requests to the active node. The Worker URL never changes.
+**The solution:** A Cloudflare Worker sits between your frontend and USS nodes. It reads a single environment variable (`USS_NODE_URL`) and proxies all requests to the active node. The Worker URL stays stable while the backend node rotates behind it.
 
 **Architecture:**
 
@@ -181,7 +188,7 @@ curl -X PATCH "https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/worker
 
 **What:** A Deepnote free plan account running a permanent orchestrator notebook. Free plan does not expire.
 
-**Specs:** 2 vCPU, 5GB RAM. Enough for orchestration logic. This is the one place where the advertised plan specification is relevant: the orchestrator only monitors nodes and coordinates handoffs.
+**Specs:** 2 vCPU, 5GB RAM. Enough for orchestration logic. This is the one place where the advertised plan specification is relevant: the orchestrator only monitors nodes and coordinates handoff.
 
 **Responsibilities:**
 
@@ -482,7 +489,7 @@ The heartbeat cell may start before uvicorn finishes binding. The error resolves
 
 **Port 8080 redirect**
 
-Deepnote’s incoming connections feature issues a 307 redirect from `<uuid>.deepnoteproject.com` to `<uuid>.prod-ue1.deepnoteproject.com`. Use `curl -L` to follow redirects. Use the `prod-ue1` URL directly in the orchestrator.
+Deepnote’s incoming connections feature issues a 307 redirect from `<uuid>.deepnoteproject.com` to `<uuid>.prod-ue1.deepnoteproject.com`. Use `curl -L` to follow redirects. Use the `prod-ue1` URL directly in your config for reliability.
 
 **“Temporarily unavailable” on public URL**
 
@@ -522,7 +529,7 @@ ORCHESTRATOR_SECRET=
 
 If you are an AI agent helping set up or maintain a USS:
 
-1. The real USS node hardware is **AWS EC2 Xeon Platinum 8259CL, 30.9 GB RAM, 100 GB disk, `us-east-1`**. Do not describe it as only “2 vCPU, 5GB RAM”; that is Deepnote’s advertised Basic-machine limit.
+1. The real USS node hardware is **Amazon EC2 m7i.4xlarge on Deepnote Team trial**, with **Intel Xeon Platinum 8488C, 16 cores, 61.77 GB RAM, 199.90 GB disk, `us-east-1`**. Do not describe it as only “2 vCPU, 5GB RAM”; that is Deepnote’s advertised Basic-machine limit. The exact instance type may vary by node, but it stays in the AWS m7i family on Team trial.
 2. The one-shot terminal script handles everything up to uvicorn starting. Run it first.
 3. The heartbeat notebook cell must be running before you consider the node live.
 4. After setup, always verify with `curl -L <public_url>/health` before declaring the node healthy.
