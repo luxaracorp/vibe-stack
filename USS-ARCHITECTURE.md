@@ -1,5 +1,23 @@
 # USS — Unified Server Stack
-## Complete Architecture Documentation
+## The real machine first
+
+> **This is the hardware USS actually runs on:** an **AWS EC2 Xeon Platinum 8259CL** machine with **30.9 GB RAM**, **100 GB disk**, in **`us-east-1`**.
+>
+> The often-repeated “2 vCPU, 5 GB RAM” figure is **Deepnote’s advertised Basic-machine limit**, not the underlying machine USS gets. USS gives your backend substantially more room than that label suggests.
+
+## What USS actually gives you
+
+USS turns that machine into a **persistent, publicly accessible, production-grade backend** at zero infrastructure cost. You get:
+
+- Real AWS compute: Xeon Platinum 8259CL, 30.9 GB RAM, 100 GB disk
+- Root terminal access and a Python 3.13 environment with `venv`
+- A public HTTPS endpoint through Deepnote’s native port 8080 exposure
+- External persistence through Upstash Redis, Cloudflare R2, and Supabase
+- A stable public URL through a Cloudflare Worker, even as machines rotate
+- Automated health checks, handoffs, state transfer, and node rotation
+- Continuous operation with only about three minutes of human work per week
+
+**Bottom line:** USS is not “a 2-vCPU, 5-GB server.” That is the plan description. The running USS node is an AWS EC2-backed machine with the hardware above. The node is disposable; the service and its data are not.
 
 > Built and tested by Luxara Corporation. Documented for AI agents and zero-budget developers.
 > This is a living architecture. Every detail here has been validated in production.
@@ -11,6 +29,7 @@
 USS is a method of running a **persistent, publicly accessible, production-grade backend** on free cloud infrastructure indefinitely, at zero cost, with no credit card and no phone number required.
 
 It combines:
+
 - **Deepnote Team trial nodes** as raw compute
 - **External state stores** (Upstash Redis, Cloudflare R2) for persistence
 - **Cloudflare Worker** as a stable routing layer
@@ -24,7 +43,7 @@ The result is a backend that never goes down, never costs money, and self-manage
 
 **USS nodes are disposable. Data is not.**
 
-A USS node is pure compute. It processes jobs, serves API requests, and runs your backend. It never holds state permanently. All state — job queues, session data, processed files, database snapshots — lives in external stores that survive node rotation.
+A USS node is pure compute. It processes jobs, serves API requests, and runs your backend. It never holds state permanently. All state — job queues, session data, processed files, database snapshots — lives in external stores.
 
 When a node dies, nothing is lost. A new node boots, connects to the same external stores, and picks up exactly where the old one left off.
 
@@ -34,16 +53,29 @@ When a node dies, nothing is lost. A new node boots, connects to the same extern
 
 ### Layer 1: Compute (USS Nodes)
 
-**What:** Deepnote Team trial machines running your backend.
+**What:** Deepnote Team trial machines backed by the AWS EC2 hardware described above, running your backend.
 
-**Specs per node:**
-- 2 vCPU, 5GB RAM (Basic machine)
-- 200GB local storage (ephemeral — do not rely on it for persistence)
+**Actual observed hardware per node:**
+
+- AWS EC2 Xeon Platinum 8259CL
+- 30.9 GB RAM
+- 100 GB disk
+- Region: `us-east-1`
+
+**Do not confuse this with Deepnote’s advertised plan limit:**
+
+- “2 vCPU, 5 GB RAM” is the Basic-machine marketing/plan label
+- It is not a description of the underlying machine USS observes in production
+
+**Node capabilities:**
+
 - Root terminal access
-- Python 3.13 environment with venv
+- Python 3.13 environment with `venv`
 - Public HTTPS URL via native port 8080 exposure
+- 100 GB local storage (ephemeral — do not rely on it for persistence)
 
 **Trial details:**
+
 - 14 days per account
 - No credit card required
 - No phone number required
@@ -52,20 +84,23 @@ When a node dies, nothing is lost. A new node boots, connects to the same extern
 - Auto shutdown: set to 24h in machine sidebar (Team trial feature)
 
 **How nodes stay alive:**
-A notebook cell runs an infinite loop that pings the backend every 30 minutes. This keeps the kernel in active execution state, preventing idle shutdown. Closing the browser tab does not stop execution — the machine keeps running in the cloud.
+
+A notebook cell runs an infinite loop that pings the backend every 30 minutes. This keeps the kernel in active execution state, preventing idle shutdown. Closing the browser tab does not stop execution.
 
 **What triggers suspension (avoid these):**
+
 - Cloudflare tunnels — flagged as open proxy behavior
 - Cryptocurrency mining processes
-- Any process matching Deepnote's abuse signatures
+- Any process matching Deepnote’s abuse signatures
 
 **What does NOT trigger suspension (confirmed safe):**
+
 - Running FastAPI/uvicorn on port 8080
 - Installing packages via pip
 - Cloning GitHub repos
 - Installing FFmpeg via static binary
 - Running long-lived Python processes in notebook cells
-- Enabling Deepnote's native Incoming Connections feature
+- Enabling Deepnote’s native Incoming Connections feature
 
 ---
 
@@ -81,7 +116,7 @@ A notebook cell runs an infinite loop that pings the backend every 30 minutes. T
 | Relational data | Supabase free tier | Postgres, free tier permanent |
 | Database snapshots | Cloudflare R2 | Pushed before node expiry |
 
-**The contract:** Every write that matters goes to an external store immediately. The node filesystem is a scratch space only.
+**The contract:** Every write that matters goes to an external store immediately. The node filesystem is scratch space only.
 
 ---
 
@@ -89,7 +124,7 @@ A notebook cell runs an infinite loop that pings the backend every 30 minutes. T
 
 **The problem:** Deepnote node URLs change on every rotation. A new node gets a new UUID subdomain. Anything hardcoded to a node URL breaks.
 
-**The solution:** A Cloudflare Worker sits between your frontend and USS nodes. It reads a single environment variable (`USS_NODE_URL`) and proxies all requests to the active node. The Worker URL never changes. Only the environment variable changes on rotation.
+**The solution:** A Cloudflare Worker sits between your frontend and USS nodes. It reads a single environment variable (`USS_NODE_URL`) and proxies all requests to the active node. The Worker URL never changes.
 
 **Architecture:**
 
@@ -146,9 +181,10 @@ curl -X PATCH "https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/worker
 
 **What:** A Deepnote free plan account running a permanent orchestrator notebook. Free plan does not expire.
 
-**Specs:** 2 vCPU, 5GB RAM. Enough for orchestration logic.
+**Specs:** 2 vCPU, 5GB RAM. Enough for orchestration logic. This is the one place where the advertised plan specification is relevant: the orchestrator only monitors nodes and coordinates handoffs.
 
 **Responsibilities:**
+
 1. Monitor active USS node health via periodic health checks
 2. Track trial expiry dates
 3. On Day 13 (1 day before expiry), trigger handoff sequence on the active node
@@ -161,7 +197,7 @@ curl -X PATCH "https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/worker
 
 ```python
 import time, requests, os
-from datetime import datetime, timedelta
+from datetime import datetime
 
 USS_NODES = [
     {
@@ -259,7 +295,8 @@ Day 14:  Account 3 created immediately (human action)
 ```
 
 **Human intervention required:** Account creation only (~3 minutes every 7 days)
-**Everything else:** Automated
+
+**Everything else:** Automated.
 
 ---
 
@@ -268,20 +305,16 @@ Day 14:  Account 3 created immediately (human action)
 Add this to your FastAPI backend. The orchestrator calls it on Day 13.
 
 ```python
-import boto3, sqlite3, os
+import boto3, os
 from fastapi import APIRouter
 
 router = APIRouter()
 
 @router.post("/handoff")
 async def handoff():
-    """
-    Called by orchestrator before node expiry.
-    Pushes all local state to external stores.
-    """
+    """Called by orchestrator before node expiry."""
     results = {}
 
-    # 1. Push SQLite database to R2
     try:
         r2 = boto3.client("s3",
             endpoint_url=os.environ.get("R2_ENDPOINT"),
@@ -293,8 +326,7 @@ async def handoff():
     except Exception as e:
         results["sqlite"] = f"error: {e}"
 
-    # 2. Any other local state flush goes here
-
+    # Any other local state flush goes here.
     return {"status": "handoff_complete", "results": results}
 ```
 
@@ -305,6 +337,7 @@ Add a corresponding `/restore` endpoint that new nodes call on boot to pull stat
 ## USS Setup (One-Shot, ~60 seconds)
 
 ### Prerequisites
+
 - Deepnote account (temp email works)
 - Team trial started (no CC required)
 - Auto shutdown set to **After 24h** in machine sidebar
@@ -372,7 +405,7 @@ Toggle On in Deepnote right sidebar. Public URL format:
 https://<uuid>.deepnoteproject.com
 ```
 
-Note: Deepnote redirects to `<uuid>.prod-ue1.deepnoteproject.com`. Use the prod-ue1 URL directly in the orchestrator for reliability.
+Deepnote redirects to `<uuid>.prod-ue1.deepnoteproject.com`. Use the `prod-ue1` URL directly in the orchestrator for reliability.
 
 ### Step 4: Verify
 
@@ -382,7 +415,7 @@ curl -L https://<your-uuid>.deepnoteproject.com/health
 
 ### Step 5: Update orchestrator
 
-Add this node to the orchestrator's `USS_NODES` list with its URL and expiry date (today + 14 days).
+Add this node to the orchestrator’s `USS_NODES` list with its URL and expiry date (today + 14 days).
 
 ---
 
@@ -394,7 +427,7 @@ Add this node to the orchestrator's `USS_NODES` list with its URL and expiry dat
 | Medium | 3-4 | 42-56 days | 1 account/week |
 | Large | 6+ | 84+ days | 1 account/week |
 
-Human effort is always 1 account per week regardless of USS size, because you stagger by 7 days. Size only affects how far ahead you're covered.
+Human effort is always 1 account per week regardless of USS size, because you stagger by 7 days. Size only affects how far ahead you’re covered.
 
 **Stagger schedule for Medium USS (4 accounts):**
 
@@ -411,7 +444,7 @@ Then create Account 5 on Day 28, and so on indefinitely.
 
 ## FFmpeg Installation Note
 
-FFmpeg is not available via apt on Deepnote's default image. Always install via static binary:
+FFmpeg is not available via apt on Deepnote’s default image. Always install via static binary:
 
 ```bash
 wget -q https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz -O /tmp/ffmpeg.tar.xz
@@ -433,25 +466,30 @@ Similarly, `socat` is not available. Use the Python TCP forwarder if port forwar
 4. **Keep the heartbeat cell running at all times.** It is what keeps the machine alive.
 5. **Never hardcode a USS node URL in your frontend.** Always go through the Cloudflare Worker.
 6. **Update the orchestrator immediately after creating a new node.** It needs the URL and expiry date.
-7. **Push state on Day 13, not Day 14.** Don't wait until the last moment.
+7. **Push state on Day 13, not Day 14.** Don’t wait until the last moment.
 
 ---
 
 ## Known Issues and Workarounds
 
-**apt can't find ffmpeg or socat**
-Deepnote's package sources don't include these. Use static binaries (ffmpeg) or Python implementations (socat replacement).
+**apt can’t find ffmpeg or socat**
+
+Deepnote’s package sources don’t include these. Use static binaries (ffmpeg) or Python implementations (socat replacement).
 
 **Heartbeat errors on startup**
+
 The heartbeat cell may start before uvicorn finishes binding. The error resolves itself on the next 30-minute ping. Not a problem.
 
 **Port 8080 redirect**
-Deepnote's incoming connections feature issues a 307 redirect from `<uuid>.deepnoteproject.com` to `<uuid>.prod-ue1.deepnoteproject.com`. Use `curl -L` to follow redirects. Use the prod-ue1 URL directly in production.
 
-**"Temporarily unavailable" on public URL**
-This means the USS node's machine has stopped. The terminal dying or machine shutdown causes this. Restart the machine from the Deepnote UI and re-run uvicorn and the heartbeat cell.
+Deepnote’s incoming connections feature issues a 307 redirect from `<uuid>.deepnoteproject.com` to `<uuid>.prod-ue1.deepnoteproject.com`. Use `curl -L` to follow redirects. Use the `prod-ue1` URL directly in the orchestrator.
+
+**“Temporarily unavailable” on public URL**
+
+This means the USS node’s machine has stopped. The terminal dying or machine shutdown causes this. Restart the machine from the Deepnote UI and re-run uvicorn and the heartbeat cell.
 
 **Account suspended**
+
 Caused by Cloudflare tunnel usage or process signatures matching abuse patterns. Do not use Cloudflare tunnels. Use native port 8080 exposure only.
 
 ---
@@ -484,14 +522,15 @@ ORCHESTRATOR_SECRET=
 
 If you are an AI agent helping set up or maintain a USS:
 
-1. The one-shot terminal script handles everything up to uvicorn starting. Run it first.
-2. The heartbeat notebook cell must be running before you consider the node live.
-3. After setup, always verify with `curl -L <public_url>/health` before declaring the node healthy.
-4. The Cloudflare Worker URL update is a single API call. Do it only after verifying the new node is healthy.
-5. Never suggest Cloudflare tunnels. They cause suspension.
-6. The orchestrator node list must be updated immediately after each new node is created.
-7. State transfer happens on Day 13. Do not let it slip to Day 14.
-8. If a node shows "temporarily unavailable," the machine stopped. It needs to be restarted from the Deepnote UI — this cannot be done programmatically.
+1. The real USS node hardware is **AWS EC2 Xeon Platinum 8259CL, 30.9 GB RAM, 100 GB disk, `us-east-1`**. Do not describe it as only “2 vCPU, 5GB RAM”; that is Deepnote’s advertised Basic-machine limit.
+2. The one-shot terminal script handles everything up to uvicorn starting. Run it first.
+3. The heartbeat notebook cell must be running before you consider the node live.
+4. After setup, always verify with `curl -L <public_url>/health` before declaring the node healthy.
+5. The Cloudflare Worker URL update is a single API call. Do it only after verifying the new node is healthy.
+6. Never suggest Cloudflare tunnels. They cause suspension.
+7. The orchestrator node list must be updated immediately after each new node is created.
+8. State transfer happens on Day 13. Do not let it slip to Day 14.
+9. If a node shows “temporarily unavailable,” the machine stopped. It needs to be restarted from the Deepnote UI — this cannot be done programmatically.
 
 ---
 
